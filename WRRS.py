@@ -113,11 +113,8 @@ def show_info_message_box(monitors_info):
     MessageBoxW = user32.MessageBoxW
     MessageBoxW.argtypes = [wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.UINT]
 
-    info_text = ""
-    info_text += f"WRRS v{version}"
-    info_text += "\n\n"
 
-    
+    info_text = ""
 
     for index, monitor in enumerate(monitors_info):
         info_text += f"Monitor {index + 1}:\n"
@@ -131,7 +128,7 @@ def show_info_message_box(monitors_info):
 
     # MessageBoxW(None, info_text, "Monitor Information", 0)
     # Run the message box in a separate thread
-    threading.Thread(target=MessageBoxW, args=(None, info_text, "Info", 0)).start()
+    threading.Thread(target=MessageBoxW, args=(None, info_text, f"Windows Refresh Rate Switcher v{version}", 0)).start()
 
 
 
@@ -210,7 +207,7 @@ if __name__ == "__main__":
 
     monitors_info = get_monitors_info()
     # Create system tray icon
-    icon = pystray.Icon(name="Monitor Refresh Rate Switcher", 
+    icon = pystray.Icon(name="Windows Refresh Rate Switcher", 
                         icon=icon_image, 
                         title="Refresh Rate Switcher")
 
