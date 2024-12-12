@@ -14,7 +14,6 @@ import sys
 import os
 
 
-
 # Пошук шляху до іконки, якщо програма працює як .exe
 if getattr(sys, 'frozen', False):
     # Якщо програма запущена як EXE, шлях до іконки відносно до виконуваного файлу
@@ -24,15 +23,8 @@ else:
     icon_path = 'icons/icon_light.png'
 
 
-version = "0.1.0"
-
-
-excluded_rates = {50, 56, 59, 67, 70}
-
-
-
-
-
+version = "0.1.1"
+excluded_rates = {23, 24, 50, 56, 59, 67, 70, 71, 119}
 
 
 def get_available_refresh_rates(device):
@@ -46,6 +38,7 @@ def get_available_refresh_rates(device):
         except Exception:
             break
     return sorted(refresh_rates)
+
 
 def get_monitors_info():
     monitors = []
@@ -81,7 +74,6 @@ def get_monitors_info():
     return monitors
 
 
-
 def change_refresh_rate(device, refresh_rate):
     devmode = win32api.EnumDisplaySettings(device, win32con.ENUM_CURRENT_SETTINGS)
     devmode.DisplayFrequency = refresh_rate
@@ -94,12 +86,10 @@ def change_refresh_rate(device, refresh_rate):
         print(f"Failed to change the refresh rate of {device}.")
 
 
-
 def refresh_monitors():
     global monitors_info
     monitors_info = get_monitors_info()
     icon.menu = pystray.Menu(*create_menu(monitors_info))
-
 
 
 def show_monitors_info_message_box(monitors_info):
@@ -121,8 +111,6 @@ def show_monitors_info_message_box(monitors_info):
     threading.Thread(target=MessageBoxW, args=(None, info_text, "Monitor Information", 0)).start()
 
 
-
-
 def create_menu(monitors_info):
     def change_rate_action(device, rate):
         return lambda _: change_refresh_rate(device, rate)
@@ -133,22 +121,7 @@ def create_menu(monitors_info):
     def refresh_action():
         return lambda _: refresh_monitors()
 
-
-
-    
-
-
-
-
-
-
-
-
-
-    
     monitor_menu = []
-
-
 
     monitor_menu.append(pystray.MenuItem(
         f"WRRS v{version}",
@@ -157,12 +130,6 @@ def create_menu(monitors_info):
     ))
 
     monitor_menu.append(pystray.Menu.SEPARATOR)
-
-
-
-
-
-
 
     for monitor in monitors_info:
         # Add monitor name
@@ -183,24 +150,17 @@ def create_menu(monitors_info):
         # Add a separator after each monitor's refresh rates
         monitor_menu.append(pystray.Menu.SEPARATOR)
 
-
-
     # Add refresh option
     monitor_menu.append(pystray.MenuItem(
         "Refresh Monitors",
         refresh_action()
     ))
 
-
-
-
     # Add show info option
     monitor_menu.append(pystray.MenuItem(
         "Show Monitor Info",
         show_info_action()
     ))
-
-    
 
     monitor_menu.append(pystray.Menu.SEPARATOR)
 
@@ -211,7 +171,6 @@ def create_menu(monitors_info):
     ))
 
     return monitor_menu
-
 
 
 if __name__ == "__main__":
