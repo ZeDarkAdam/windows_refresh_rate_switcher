@@ -10,16 +10,24 @@ import pystray
 from pystray import MenuItem as item
 from PIL import Image
 
+import sys
+import os
 
 
 
+# Пошук шляху до іконки, якщо програма працює як .exe
+if getattr(sys, 'frozen', False):
+    # Якщо програма запущена як EXE, шлях до іконки відносно до виконуваного файлу
+    icon_path = os.path.join(sys._MEIPASS, 'icon_light.png')
+else:
+    # Якщо програма запущена з Python, використовуємо поточну директорію
+    icon_path = 'icons/icon_light.png'
 
+
+version = "0.1.0"
 
 
 excluded_rates = {50, 56, 59, 67, 70}
-
-
-
 
 
 
@@ -108,10 +116,9 @@ def show_monitors_info_message_box(monitors_info):
         info_text += f"  Available Refresh Rates: {', '.join(map(str, monitor['AvailableRefreshRates']))} Hz\n"
         info_text += "\n"
 
+    # MessageBoxW(None, info_text, "Monitor Information", 0)
     # Run the message box in a separate thread
     threading.Thread(target=MessageBoxW, args=(None, info_text, "Monitor Information", 0)).start()
-
-
 
 
 
@@ -126,8 +133,37 @@ def create_menu(monitors_info):
     def refresh_action():
         return lambda _: refresh_monitors()
 
+
+
+    
+
+
+
+
+
+
+
+
+
     
     monitor_menu = []
+
+
+
+    monitor_menu.append(pystray.MenuItem(
+        f"WRRS v{version}",
+        None,
+        enabled=False
+    ))
+
+    monitor_menu.append(pystray.Menu.SEPARATOR)
+
+
+
+
+
+
+
     for monitor in monitors_info:
         # Add monitor name
         monitor_menu.append(pystray.MenuItem(
@@ -183,7 +219,8 @@ if __name__ == "__main__":
 
 
     # Load icon image
-    icon_image = Image.open("icon.png")
+    icon_image = Image.open(icon_path)
+    # icon_image = pystray.Icon("Windows Refresh Rate Switcher", icon=icon_path)
 
     # Create system tray icon
     icon = pystray.Icon("Monitor Refresh Rate")
