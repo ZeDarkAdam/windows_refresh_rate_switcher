@@ -3,6 +3,7 @@ from ctypes import wintypes
 
 import win32api
 import win32con
+import win32gui
 
 import threading
 
@@ -14,6 +15,15 @@ import sys
 import os
 
 
+# import customtkinter as ctk
+
+
+# MARK: Constants
+version = "0.1.3"
+# excluded_rates = {23, 24, 50, 56, 59, 67, 70, 71, 119}
+excluded_rates = {23, 56, 59, 67, 70, 71, 119}
+
+
 # Пошук шляху до іконки, якщо програма працює як .exe
 if getattr(sys, 'frozen', False):
     # Якщо програма запущена як EXE, шлях до іконки відносно до виконуваного файлу
@@ -23,10 +33,8 @@ else:
     icon_path = 'icons/icon_light.png'
 
 
-version = "0.1.1"
-excluded_rates = {23, 24, 50, 56, 59, 67, 70, 71, 119}
 
-
+# MARK: get_available_refresh_rates()
 def get_available_refresh_rates(device):
     refresh_rates = set()
     i = 0
@@ -40,6 +48,8 @@ def get_available_refresh_rates(device):
     return sorted(refresh_rates)
 
 
+
+# MARK: get_monitors_info()
 def get_monitors_info():
     monitors = []
 
@@ -74,6 +84,8 @@ def get_monitors_info():
     return monitors
 
 
+
+# MARK: change_refresh_rate()
 def change_refresh_rate(device, refresh_rate):
     devmode = win32api.EnumDisplaySettings(device, win32con.ENUM_CURRENT_SETTINGS)
     devmode.DisplayFrequency = refresh_rate
@@ -86,50 +98,64 @@ def change_refresh_rate(device, refresh_rate):
         print(f"Failed to change the refresh rate of {device}.")
 
 
+
+# MARK: refresh_monitors()
 def refresh_monitors():
     global monitors_info
     monitors_info = get_monitors_info()
     icon.menu = pystray.Menu(*create_menu(monitors_info))
 
 
-def show_monitors_info_message_box(monitors_info):
+
+# MARK: show_monitors_info_message_box()
+def show_info_message_box(monitors_info):
     user32 = ctypes.WinDLL('user32', use_last_error=True)
     MessageBoxW = user32.MessageBoxW
     MessageBoxW.argtypes = [wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.UINT]
 
     info_text = ""
+    info_text += f"WRRS v{version}"
+    info_text += "\n\n"
+
+    
+
     for index, monitor in enumerate(monitors_info):
         info_text += f"Monitor {index + 1}:\n"
-        info_text += f"  Device: {monitor['Device']}\n"
+        # info_text += f"  Device: {monitor['Device']}\n"
         info_text += f"  Resolution: {monitor['Resolution']}\n"
         info_text += f"  Refresh Rate: {monitor['RefreshRate']} Hz\n"
         info_text += f"  Available Refresh Rates: {', '.join(map(str, monitor['AvailableRefreshRates']))} Hz\n"
         info_text += "\n"
 
+    info_text += f"Excluded Refresh Rates: {', '.join(map(str, sorted(excluded_rates)))} Hz"
+
     # MessageBoxW(None, info_text, "Monitor Information", 0)
     # Run the message box in a separate thread
-    threading.Thread(target=MessageBoxW, args=(None, info_text, "Monitor Information", 0)).start()
+    threading.Thread(target=MessageBoxW, args=(None, info_text, "Info", 0)).start()
 
 
+
+# MARK: create_menu()
 def create_menu(monitors_info):
     def change_rate_action(device, rate):
         return lambda _: change_refresh_rate(device, rate)
 
     def show_info_action():
-        return lambda _: show_monitors_info_message_box(monitors_info)
+        return lambda _: show_info_message_box(monitors_info)
 
     def refresh_action():
         return lambda _: refresh_monitors()
 
+
     monitor_menu = []
 
-    monitor_menu.append(pystray.MenuItem(
-        f"WRRS v{version}",
-        None,
-        enabled=False
-    ))
+    # monitor_menu.append(pystray.MenuItem(
+    #     f"WRRS v{version}",
+    #     None,
+    #     enabled=False
+    # ))
 
-    monitor_menu.append(pystray.Menu.SEPARATOR)
+    # monitor_menu.append(pystray.Menu.SEPARATOR)
 
     for monitor in monitors_info:
         # Add monitor name
@@ -152,13 +178,13 @@ def create_menu(monitors_info):
 
     # Add refresh option
     monitor_menu.append(pystray.MenuItem(
-        "Refresh Monitors",
+        "Refresh",
         refresh_action()
     ))
 
     # Add show info option
     monitor_menu.append(pystray.MenuItem(
-        "Show Monitor Info",
+        "Info",
         show_info_action()
     ))
 
@@ -173,17 +199,27 @@ def create_menu(monitors_info):
     return monitor_menu
 
 
-if __name__ == "__main__":
-    monitors_info = get_monitors_info()
 
+
+
+# MARK: Main
+if __name__ == "__main__":
 
     # Load icon image
     icon_image = Image.open(icon_path)
-    # icon_image = pystray.Icon("Windows Refresh Rate Switcher", icon=icon_path)
 
+    monitors_info = get_monitors_info()
     # Create system tray icon
-    icon = pystray.Icon("Monitor Refresh Rate")
-    icon.icon = icon_image
+    icon = pystray.Icon(name="Monitor Refresh Rate Switcher", 
+                        icon=icon_image, 
+                        title="Refresh Rate Switcher")
+
     icon.menu = pystray.Menu(*create_menu(monitors_info))
-    # show_monitors_info_message_box(monitors_info)
+
     icon.run()
+
+
+
+
+
+
