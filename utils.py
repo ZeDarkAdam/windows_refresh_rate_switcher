@@ -1,6 +1,8 @@
 import win32api
 import win32con
 
+import winreg
+
 def is_dark_theme():
     try:
         key = win32api.RegOpenKeyEx(win32con.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', 0, win32con.KEY_READ)
@@ -9,3 +11,20 @@ def is_dark_theme():
         return value == 0
     except Exception:
         return False
+    
+
+    
+# Перевірка, чи існує ключ реєстру
+def key_exists(path):
+    try:
+        winreg.OpenKey(winreg.HKEY_CURRENT_USER, path, 0, winreg.KEY_READ)
+        return True
+    except FileNotFoundError:
+        return False
+
+# Створення ключа реєстру
+def create_registry_key(path):
+    try:
+        winreg.CreateKey(winreg.HKEY_CURRENT_USER, path)
+    except Exception as e:
+        print(f"Error creating registry key: {e}")
