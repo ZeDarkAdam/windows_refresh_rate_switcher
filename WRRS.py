@@ -14,23 +14,42 @@ from PIL import Image
 import sys
 import os
 
-
 # import customtkinter as ctk
 
 
 # MARK: Constants
 version = "0.1.4"
 # excluded_rates = {23, 24, 50, 56, 59, 67, 70, 71, 119}
-excluded_rates = {23, 56, 59, 67, 70, 71, 119}
+excluded_rates = {23, 24, 56, 59, 67, 70, 71, 119}
+
+
+
+
+
+def is_dark_theme():
+    try:
+        key = win32api.RegOpenKeyEx(win32con.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', 0, win32con.KEY_READ)
+        value, _ = win32api.RegQueryValueEx(key, 'AppsUseLightTheme')
+        win32api.RegCloseKey(key)
+        return value == 0
+    except Exception:
+        return False
+
 
 
 # Пошук шляху до іконки, якщо програма працює як .exe
 if getattr(sys, 'frozen', False):
     # Якщо програма запущена як EXE, шлях до іконки відносно до виконуваного файлу
-    icon_path = os.path.join(sys._MEIPASS, 'icon_light.png')
+    if is_dark_theme():
+        icon_path = os.path.join(sys._MEIPASS, 'icon_light.png')
+    else:
+        icon_path = os.path.join(sys._MEIPASS, 'icon_dark.png')
 else:
     # Якщо програма запущена з Python, використовуємо поточну директорію
-    icon_path = 'icons/icon_light.png'
+    if is_dark_theme():
+        icon_path = 'icons/icon_light.png' 
+    else:
+        icon_path = 'icons/icon_dark.png'
 
 
 
@@ -221,6 +240,8 @@ if __name__ == "__main__":
     icon.menu = pystray.Menu(*create_menu(monitors_info))
 
     icon.run()
+
+    
 
 
 
