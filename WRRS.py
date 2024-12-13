@@ -223,7 +223,7 @@ def create_menu(monitors_info):
 
     # Add exit option
     monitor_menu.append(pystray.MenuItem(
-        "Exit",
+        "Quit",
         lambda _: icon.stop()
     ))
 
@@ -237,16 +237,25 @@ if __name__ == "__main__":
     # MARK: Load icon
     if getattr(sys, 'frozen', False):
         # Якщо програма запущена як EXE, шлях до іконки відносно до виконуваного файлу
-        if is_dark_theme():
-            icon_path = os.path.join(sys._MEIPASS, 'icon_light.png')
-        else:
-            icon_path = os.path.join(sys._MEIPASS, 'icon_dark.png')
-    else: 
+
+        icon_path = os.path.join(sys._MEIPASS, 'icon_color.ico')
+
+        # if is_dark_theme():
+        #     icon_path = os.path.join(sys._MEIPASS, 'icon_light.ico')
+        # else:
+        #     icon_path = os.path.join(sys._MEIPASS, 'icon_dark.ico')
+
+        
+
+    else:
         # Якщо програма запущена з Python, використовуємо поточну директорію
-        if is_dark_theme():
-            icon_path = 'icons/icon_light.png' 
-        else:
-            icon_path = 'icons/icon_dark.png'
+
+        icon_path = 'icons/icon_color.ico'
+
+        # if is_dark_theme():
+        #     icon_path = 'icons/icon_light.ico' 
+        # else:
+        #     icon_path = 'icons/icon_dark.ico'
 
     icon_image = Image.open(icon_path)
 
