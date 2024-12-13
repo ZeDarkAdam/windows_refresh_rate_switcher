@@ -1,9 +1,8 @@
 import ctypes
 from ctypes import wintypes
 
-import win32api
-import win32con
-import win32gui
+import win32api, win32con, win32gui
+
 
 import threading
 
@@ -14,11 +13,12 @@ from PIL import Image
 import sys
 import os
 
-# import customtkinter as ctk
+import customtkinter as ctk
 
+from utils import is_dark_theme
 
 # MARK: Constants
-version = "0.1.4"
+version = "0.1.5"
 # excluded_rates = {23, 24, 50, 56, 59, 67, 70, 71, 119}
 excluded_rates = {23, 24, 56, 59, 67, 70, 71, 119}
 
@@ -26,14 +26,6 @@ excluded_rates = {23, 24, 56, 59, 67, 70, 71, 119}
 
 
 
-def is_dark_theme():
-    try:
-        key = win32api.RegOpenKeyEx(win32con.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize', 0, win32con.KEY_READ)
-        value, _ = win32api.RegQueryValueEx(key, 'AppsUseLightTheme')
-        win32api.RegCloseKey(key)
-        return value == 0
-    except Exception:
-        return False
 
 
 
@@ -151,13 +143,74 @@ def show_info_message_box(monitors_info):
 
 
 
+
+
+# MARK: show_info_ctk()
+def show_info_ctk(monitors_info):
+    # create a new window
+    root = ctk.CTk()
+    root.title(f"Windows Refresh Rate Switcher v{version}")
+    
+    # set the window size
+    window_width = 500
+    window_height = 300
+
+    # Get the screen width and height
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    # Calculate the x and y coordinates for the Tk root window
+    x_coordinate = (screen_width - window_width) // 2
+    y_coordinate = (screen_height - window_height) // 2
+
+    # Set the window size and position
+    root.geometry(f"{window_width}x{window_height}+{x_coordinate}+{y_coordinate}")
+
+    # Create a text box to display the information
+    info_text = ctk.CTkTextbox(root, width=550, height=350, wrap="word")
+    info_text.pack(pady=10, padx=10)
+
+    # Form the text information about the monitors
+    display_text = ""
+    for index, monitor in enumerate(monitors_info):
+        display_text += f"Monitor {index + 1}:\n"
+        display_text += f"  Resolution: {monitor['Resolution']}\n"
+        display_text += f"  Refresh Rate: {monitor['RefreshRate']} Hz\n"
+        display_text += f"  Available Refresh Rates: {', '.join(map(str, monitor['AvailableRefreshRates']))} Hz\n"
+        display_text += "\n"
+
+    display_text += f"Excluded Refresh Rates: {', '.join(map(str, sorted(excluded_rates)))} Hz"
+
+    # Add the text to the text box
+    info_text.insert("1.0", display_text)
+    info_text.configure(state="disabled")  # Make the text box read-only
+
+    # Create a button to close the window
+    # close_button = ctk.CTkButton(root, text="Close", command=root.destroy)
+    # close_button.pack(pady=10)
+
+    # Start the event loop
+    root.mainloop()
+
+
+
+
+
+
+
+
+
+
+
+
 # MARK: create_menu()
 def create_menu(monitors_info):
     def change_rate_action(device, rate):
         return lambda _: change_refresh_rate(device, rate)
 
     def show_info_action():
-        return lambda _: show_info_message_box(monitors_info)
+        # return lambda _: show_info_message_box(monitors_info)
+        return lambda _: threading.Thread(target=show_info_ctk, args=(monitors_info,)).start()
 
     def refresh_action():
         return lambda _: refresh_monitors()
@@ -232,6 +285,12 @@ if __name__ == "__main__":
     icon_image = Image.open(icon_path)
 
     monitors_info = get_monitors_info()
+
+
+
+    
+
+
     # Create system tray icon
     icon = pystray.Icon(name="Windows Refresh Rate Switcher", 
                         icon=icon_image, 
