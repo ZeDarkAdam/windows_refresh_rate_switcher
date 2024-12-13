@@ -19,7 +19,7 @@ import os
 
 
 # MARK: Constants
-version = "0.1.3"
+version = "0.1.4"
 # excluded_rates = {23, 24, 50, 56, 59, 67, 70, 71, 119}
 excluded_rates = {23, 56, 59, 67, 70, 71, 119}
 
@@ -151,27 +151,34 @@ def create_menu(monitors_info):
     #     None,
     #     enabled=False
     # ))
-
     # monitor_menu.append(pystray.Menu.SEPARATOR)
 
     for monitor in monitors_info:
+
+        monitor_name = monitor['Device'].replace("\\\\.\\", "")  # Видаляємо \\.\ з початку рядка
         # Add monitor name
         monitor_menu.append(pystray.MenuItem(
-            f"{monitor['Device']}",
+            monitor_name,
             None,
             enabled=False
         ))
+
         for rate in monitor['AvailableRefreshRates']:
+
             if rate not in excluded_rates:
+
                 # Add checkmark or radio button for current refresh rate
                 is_current_rate = (rate == monitor['RefreshRate'])
+
                 monitor_menu.append(pystray.MenuItem(
                     f"{rate} Hz",
                     change_rate_action(monitor['Device'], rate),
                     checked=lambda item, is_current_rate=is_current_rate: is_current_rate
                 ))
+
         # Add a separator after each monitor's refresh rates
         monitor_menu.append(pystray.Menu.SEPARATOR)
+
 
     # Add refresh option
     monitor_menu.append(pystray.MenuItem(
@@ -189,7 +196,7 @@ def create_menu(monitors_info):
 
     # Add exit option
     monitor_menu.append(pystray.MenuItem(
-        "Exit",
+        "Quit",
         lambda _: icon.stop()
     ))
 
@@ -209,7 +216,7 @@ if __name__ == "__main__":
     # Create system tray icon
     icon = pystray.Icon(name="Windows Refresh Rate Switcher", 
                         icon=icon_image, 
-                        title="Refresh Rate Switcher")
+                        title=f"Refresh Rate Switcher v{version}")
 
     icon.menu = pystray.Menu(*create_menu(monitors_info))
 

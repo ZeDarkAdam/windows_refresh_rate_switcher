@@ -29,7 +29,7 @@ jobs:
 
       - name: Run build script
         run: |
-          .\build_exe.bat
+          .\build.bat
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
