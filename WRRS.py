@@ -12,11 +12,8 @@ import os
 
 import winreg
 
-from utils import is_dark_theme, key_exists, create_registry_key
+from utils import is_dark_theme, key_exists, create_reg_key
 import config
-
-
-
 
 
 
@@ -26,7 +23,7 @@ def write_excluded_rates_to_registry(excluded_rates):
         excluded_rates_str = ",".join(map(str, excluded_rates))
 
         if not key_exists(config.REGISTRY_PATH):
-            create_registry_key(config.REGISTRY_PATH)
+            create_reg_key(config.REGISTRY_PATH)
 
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH, 0, winreg.KEY_WRITE)
         winreg.SetValueEx(key, "ExcludedHzRates", 0, winreg.REG_SZ, excluded_rates_str)
@@ -40,7 +37,7 @@ def write_excluded_rates_to_registry(excluded_rates):
 def read_excluded_rates_from_registry():
     try:
         if not key_exists(config.REGISTRY_PATH):
-            create_registry_key(config.REGISTRY_PATH)
+            create_reg_key(config.REGISTRY_PATH)
 
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH, 0, winreg.KEY_READ)
         
@@ -129,14 +126,13 @@ def change_refresh_rate(device, refresh_rate):
 
 
 
-# MARK: refresh_monitors()
-def refresh_monitors():
+# MARK: refresh_tray()
+def refresh_tray():
     icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
 
 
 
 def toggle_excluded_rate_ext(rate):
-        
         excluded_rates = read_excluded_rates_from_registry()
 
         if rate in excluded_rates:
@@ -146,9 +142,9 @@ def toggle_excluded_rate_ext(rate):
 
         write_excluded_rates_to_registry(excluded_rates)
 
-        # refresh_monitors()  # Refresh monitors to update tray menu
-        # Refresh the icon menu
+        # Refresh tray menu
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
+        # refresh_tray()
 
 
 
@@ -159,7 +155,7 @@ def create_menu(monitors_info):
         return lambda _: change_refresh_rate(device, rate)
 
     def refresh_action():
-        return lambda _: refresh_monitors()
+        return lambda _: refresh_tray()
     
     def toggle_excluded_rate(rate):
         return lambda _: toggle_excluded_rate_ext(rate)
@@ -194,7 +190,8 @@ def create_menu(monitors_info):
     # Add refresh option
     monitor_menu.append(pystray.MenuItem(
         "Refresh",
-        refresh_action()
+        refresh_action(),
+        default=True
     ))
 
     all_rates = set()
@@ -243,8 +240,6 @@ if __name__ == "__main__":
         # else:
         #     icon_path = os.path.join(sys._MEIPASS, 'icon_dark.ico')
 
-        
-
     else:
         # Якщо програма запущена з Python, використовуємо поточну директорію
 
@@ -259,11 +254,13 @@ if __name__ == "__main__":
 
 
     # Create system tray icon
-    icon = pystray.Icon(name="Windows Refresh Rate Switcher", 
-                        icon=icon_image, 
-                        title=f"Refresh Rate Switcher v{config.version}")
+    icon = pystray.Icon(name="WRRS",
+                        title=f"Refresh Rate Switcher v{config.version}",
+                        icon=icon_image,
+                        menu=pystray.Menu(*create_menu(get_monitors_info()))
+                        )
 
-    icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
+
 
     icon.run()
 

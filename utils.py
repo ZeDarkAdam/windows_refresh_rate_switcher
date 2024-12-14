@@ -23,7 +23,7 @@ def key_exists(path):
         return False
 
 # Створення ключа реєстру
-def create_registry_key(path):
+def create_reg_key(path):
     try:
         winreg.CreateKey(winreg.HKEY_CURRENT_USER, path)
     except Exception as e:
