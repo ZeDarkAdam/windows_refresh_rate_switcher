@@ -13,12 +13,10 @@ import os
 import winreg
 
 from utils import is_dark_theme, key_exists, create_registry_key
+import config
 
 
 
-# MARK: Constants
-version = "0.2.0"
-REGISTRY_PATH = r"Software\WRRS\Settings"
 
 
 
@@ -27,10 +25,10 @@ def write_excluded_rates_to_registry(excluded_rates):
     try:
         excluded_rates_str = ",".join(map(str, excluded_rates))
 
-        if not key_exists(REGISTRY_PATH):
-            create_registry_key(REGISTRY_PATH)
+        if not key_exists(config.REGISTRY_PATH):
+            create_registry_key(config.REGISTRY_PATH)
 
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH, 0, winreg.KEY_WRITE)
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH, 0, winreg.KEY_WRITE)
         winreg.SetValueEx(key, "ExcludedHzRates", 0, winreg.REG_SZ, excluded_rates_str)
         winreg.CloseKey(key)
     except Exception as e:
@@ -41,10 +39,10 @@ def write_excluded_rates_to_registry(excluded_rates):
 # MARK: read_excluded_rates_from_registry()
 def read_excluded_rates_from_registry():
     try:
-        if not key_exists(REGISTRY_PATH):
-            create_registry_key(REGISTRY_PATH)
+        if not key_exists(config.REGISTRY_PATH):
+            create_registry_key(config.REGISTRY_PATH)
 
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH, 0, winreg.KEY_READ)
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH, 0, winreg.KEY_READ)
         
         try:
             value, _ = winreg.QueryValueEx(key, "ExcludedHzRates")
@@ -263,7 +261,7 @@ if __name__ == "__main__":
     # Create system tray icon
     icon = pystray.Icon(name="Windows Refresh Rate Switcher", 
                         icon=icon_image, 
-                        title=f"Refresh Rate Switcher v{version}")
+                        title=f"Refresh Rate Switcher v{config.version}")
 
     icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
 
