@@ -147,6 +147,15 @@ def get_monitors_info():
         monitor["manufacturer"] = sbc_info[index]["manufacturer"]
         monitor["manufacturer_id"] = sbc_info[index]["manufacturer_id"]
 
+        if monitor["manufacturer"] is None:
+            monitor["display_name"] = f"DISPLAY{index + 1}"
+        else:
+            monitor["display_name"] = f"{monitor["manufacturer"]} ({index + 1})"
+
+
+    for monitor in monitors:
+        print(monitor)
+
 
     return monitors
 
@@ -161,6 +170,7 @@ def get_monitors_info():
 def change_refresh_rate(monitor, refresh_rate):
 
     device = monitor["Device"]
+    # print(device, refresh_rate)
 
     devmode = win32api.EnumDisplaySettings(device, win32con.ENUM_CURRENT_SETTINGS)
     devmode.DisplayFrequency = refresh_rate
@@ -178,8 +188,8 @@ def change_refresh_rate(monitor, refresh_rate):
 # MARK: change_refresh_rate_with_brightness_restore()
 def change_refresh_rate_with_brightness_restore(monitor, refresh_rate):
     
-    brightness = sbc.get_brightness(display=monitor["name"])
-    print(f"Current brightness of {monitor['name']}: {brightness}")
+    brightness_before = sbc.get_brightness(display=monitor["name"])
+    print(f"Current brightness of {monitor['name']}: {brightness_before}")
 
 
     change_refresh_rate(monitor, refresh_rate)
@@ -191,7 +201,12 @@ def change_refresh_rate_with_brightness_restore(monitor, refresh_rate):
     # Restore brightness in a separate thread
     def restore_brightness():
         time.sleep(5)
-        sbc.set_brightness(*brightness, display=monitor["name"])
+
+        brightness_after = sbc.get_brightness(display=monitor["name"])
+
+        if brightness_after != brightness_before:
+            sbc.set_brightness(*brightness_before, display=monitor["name"])
+            print(f"Restored brightness of {monitor['name']} from {brightness_after} to {brightness_before}")
 
     threading.Thread(target=restore_brightness).start()
 
@@ -262,6 +277,56 @@ def show_message(title, message):
 
 
 
+# MARK: write_preset_to_registry()
+def write_preset_to_registry(preset_name, serial, refresh_rate):
+    try:
+        if not key_exists(config.REGISTRY_PATH):
+            create_reg_key(config.REGISTRY_PATH)
+
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH, 0, winreg.KEY_WRITE)
+        winreg.SetValueEx(key, f"Preset_{preset_name}", 0, winreg.REG_SZ, f"{serial},{refresh_rate}")
+        winreg.CloseKey(key)
+    except Exception as e:
+        print(f"Error writing preset to registry: {e}")
+
+# MARK: read_presets_from_registry()
+def read_presets_from_registry():
+    presets = {}
+    try:
+        if not key_exists(config.REGISTRY_PATH):
+            create_reg_key(config.REGISTRY_PATH)
+
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH, 0, winreg.KEY_READ)
+        i = 0
+
+        while True:
+            try:
+                value_name, value_data, _ = winreg.EnumValue(key, i)
+                if value_name.startswith("Preset_"):
+                    preset_name = value_name.replace("Preset_", "")
+                    serial, refresh_rate = value_data.split(",")
+                    presets[preset_name] = {"serial": serial, "refresh_rate": int(refresh_rate)}
+                i += 1
+            except OSError:
+                break
+        winreg.CloseKey(key)
+
+    except Exception as e:
+        print(f"Error reading presets from registry: {e}")
+
+    print(f"read_presets_from_registry(): {presets}")
+    return presets
+
+
+
+
+
+
+
+
+
+
+
 # MARK: create_menu()
 def create_menu(monitors_info):
     
@@ -281,32 +346,39 @@ def create_menu(monitors_info):
     monitor_menu = []
 
     for monitor in monitors_info:
+
         # Add monitor name
-        monitor_name = monitor['Device'].replace("\\\\.\\", "")  # Видаляємо \\.\ з початку рядка
+        # monitor_name = monitor['Device'].replace("\\\\.\\", "")  # Видаляємо \\.\ з початку рядка
+        monitor_name = monitor["display_name"]
 
         monitor_menu.append(pystray.MenuItem(
-            monitor_name,
-            None,
+            text = monitor_name,
+            action = None,
             enabled=False
         ))
+
         for rate in monitor['AvailableRefreshRates']:
             if rate not in excluded_rates:
                 # Add checkmark or radio button for current refresh rate
                 is_current_rate = (rate == monitor['RefreshRate'])
                 monitor_menu.append(pystray.MenuItem(
-                    f"{rate} Hz",
-                    change_rate_action(monitor, rate),
+                    text = f"{rate} Hz",
+                    action = change_rate_action(monitor, rate),
                     checked=lambda item, is_current_rate=is_current_rate: is_current_rate
                 ))
         # Add a separator after each monitor's refresh rates
         monitor_menu.append(pystray.Menu.SEPARATOR)
 
+
+
+
+
     # Add refresh option
     monitor_menu.append(pystray.MenuItem(
-        "Refresh",
+        text = "Refresh",
         # refresh_action(),
-        lambda _: refresh_tray(),
-        # default=True
+        action = lambda _: refresh_tray(),
+        default=True
     ))
 
     all_rates = set()
@@ -357,8 +429,76 @@ def create_menu(monitors_info):
     monitor_menu.append(pystray.MenuItem(
         "Toggle 2nd Monitor 60/72 Hz",
         lambda _: toggle_second_monitor_rate(),
-        default=True
+        # default=True
     ))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def save_preset_action(monitor):
+        return lambda _: save_preset(monitor)
+
+    def load_preset_action(preset_name):
+        return lambda _: load_preset(preset_name)
+
+    def save_preset(monitor):
+        preset_name = f"Preset_{monitor['display_name']}"
+        write_preset_to_registry(preset_name, monitor["serial"], monitor["RefreshRate"])
+        show_message("Refresh Rate Switcher", f"Preset '{preset_name}' saved.")
+
+    def load_preset(preset_name):
+        presets = read_presets_from_registry()
+        if preset_name in presets:
+            preset = presets[preset_name]
+            for monitor in monitors_info:
+                if monitor["serial"] == preset["serial"]:
+                    change_refresh_rate_with_brightness_restore(monitor, preset["refresh_rate"])
+                    show_message("Refresh Rate Switcher", f"Preset '{preset_name}' loaded.")
+                    break
+
+    # Add save preset option for each monitor
+    for monitor in monitors_info:
+        monitor_menu.append(pystray.MenuItem(
+            f"Save Preset for {monitor['display_name']}",
+            save_preset_action(monitor)
+        ))
+
+    # Add load preset options
+    presets = read_presets_from_registry()
+    for preset_name in presets.keys():
+        monitor_menu.append(pystray.MenuItem(
+            f"Load {preset_name}",
+            load_preset_action(preset_name)
+        ))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -382,17 +522,14 @@ def create_menu(monitors_info):
 
 
 
-def auto_refresh_tray():
-    while True:
-        refresh_tray()
-        time.sleep(1)
+
 
 
 # MARK: set_all_monitors_to_60hz()
 def set_all_monitors_to_60hz():
     monitors_info = get_monitors_info()
     for monitor in monitors_info:
-        change_refresh_rate(monitor['Device'], 60)
+        change_refresh_rate_with_brightness_restore(monitor, 60)
     show_message("Refresh Rate Switcher", "All monitors set to 60 Hz.")
 
 
@@ -424,13 +561,21 @@ if __name__ == "__main__":
 
     icon_image = Image.open(icon_path)
 
-
+    monitors_info = get_monitors_info()
     # Create system tray icon
     icon = pystray.Icon(name="WRRS",
                         title=f"Refresh Rate Switcher v{config.version}",
                         icon=icon_image,
-                        menu=pystray.Menu(*create_menu(get_monitors_info()))
+                        menu=pystray.Menu(*create_menu(monitors_info))
                         )
+
+
+
+    # Register global hotkey (Ctrl+Alt+S) to set all monitors to 60 Hz
+    keyboard.add_hotkey('ctrl+alt+1', set_all_monitors_to_60hz)
+
+
+
 
     icon.run()
 
@@ -438,11 +583,9 @@ if __name__ == "__main__":
 
 
 
-    # Register global hotkey (Ctrl+Alt+S) to set all monitors to 60 Hz
-    # keyboard.add_hotkey('ctrl+alt+]', set_all_monitors_to_60hz)
+    
 
-    # Start auto-refresh thread
-    # threading.Thread(target=auto_refresh_tray, daemon=True).start()
+    
 
     # m_info = get_monitors_info()
 

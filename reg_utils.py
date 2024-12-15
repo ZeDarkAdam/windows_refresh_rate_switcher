@@ -1,5 +1,4 @@
-import win32api
-import win32con
+import win32api, win32con
 
 import winreg
 
@@ -28,3 +27,8 @@ def create_reg_key(path):
         winreg.CreateKey(winreg.HKEY_CURRENT_USER, path)
     except Exception as e:
         print(f"Error creating registry key: {e}")
+
+
+
+if __name__ == '__main__':
+    print(is_dark_theme())
