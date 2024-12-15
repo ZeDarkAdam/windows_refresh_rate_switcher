@@ -12,8 +12,33 @@ import os
 
 import winreg
 
-from utils import is_dark_theme, key_exists, create_reg_key
+from reg_utils import is_dark_theme, key_exists, create_reg_key
 import config
+
+from winotify import Notification, audio
+
+import threading
+
+import time
+import keyboard  # Add this import for keyboard hotkey support
+
+
+
+
+import screen_brightness_control as sbc
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -30,8 +55,6 @@ def write_excluded_rates_to_registry(excluded_rates):
         winreg.CloseKey(key)
     except Exception as e:
         print(f"Error writing to registry: {e}")
-
-
 
 # MARK: read_excluded_rates_from_registry()
 def read_excluded_rates_from_registry():
@@ -59,6 +82,12 @@ def read_excluded_rates_from_registry():
 
 
 
+
+
+
+
+
+
 # MARK: get_available_refresh_rates()
 def get_available_refresh_rates(device):
     refresh_rates = set()
@@ -76,6 +105,7 @@ def get_available_refresh_rates(device):
 
 # MARK: get_monitors_info()
 def get_monitors_info():
+
     monitors = []
 
     # Callback function for EnumDisplayMonitors
@@ -106,12 +136,32 @@ def get_monitors_info():
     # Call EnumDisplayMonitors
     enum_display_monitors(None, None, MonitorEnumProc(monitor_enum_proc), 0)
 
+
+
+
+    sbc_info = sbc.list_monitors_info()
+    for index, monitor in enumerate(monitors):
+        monitor["name"] = sbc_info[index]["name"]
+        monitor["model"] = sbc_info[index]["model"]
+        monitor["serial"] = sbc_info[index]["serial"]
+        monitor["manufacturer"] = sbc_info[index]["manufacturer"]
+        monitor["manufacturer_id"] = sbc_info[index]["manufacturer_id"]
+
+
     return monitors
 
 
 
+
+
+
+
+
 # MARK: change_refresh_rate()
-def change_refresh_rate(device, refresh_rate):
+def change_refresh_rate(monitor, refresh_rate):
+
+    device = monitor["Device"]
+
     devmode = win32api.EnumDisplaySettings(device, win32con.ENUM_CURRENT_SETTINGS)
     devmode.DisplayFrequency = refresh_rate
     result = win32api.ChangeDisplaySettingsEx(device, devmode)
@@ -123,6 +173,30 @@ def change_refresh_rate(device, refresh_rate):
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
     else:
         print(f"Failed to change the refresh rate of {device}.")
+
+
+# MARK: change_refresh_rate_with_brightness_restore()
+def change_refresh_rate_with_brightness_restore(monitor, refresh_rate):
+    
+    brightness = sbc.get_brightness(display=monitor["name"])
+    print(f"Current brightness of {monitor['name']}: {brightness}")
+
+
+    change_refresh_rate(monitor, refresh_rate)
+
+    # Restore brightness
+    # time.sleep(5)
+    # sbc.set_brightness(*brightness, display=monitor["name"])
+
+    # Restore brightness in a separate thread
+    def restore_brightness():
+        time.sleep(5)
+        sbc.set_brightness(*brightness, display=monitor["name"])
+
+    threading.Thread(target=restore_brightness).start()
+
+
+
 
 
 
@@ -146,13 +220,53 @@ def toggle_excluded_rate_ext(rate):
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
         # refresh_tray()
 
+def print_test():
+    print("Test")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# MARK: show_message()
+def show_message(title, message):
+
+    # icon_path = "C:\Projects\GitHub\windows_refresh_rate_switcher\icons\icon_color.ico"
+
+    toast = Notification(
+        app_id = 'Refresh Rate Switcher',
+        title = title,
+        msg = message,
+        duration = "short",
+        # icon = icon_path,
+    )
+    toast.set_audio(audio.Default, loop=False)
+    toast.show()
+
+
+
+
+
+
+
+
+
+
 
 
 # MARK: create_menu()
 def create_menu(monitors_info):
     
-    def change_rate_action(device, rate):
-        return lambda _: change_refresh_rate(device, rate)
+    def change_rate_action(monitor, rate):
+        return lambda _: change_refresh_rate_with_brightness_restore(monitor, rate)
 
     def refresh_action():
         return lambda _: refresh_tray()
@@ -181,7 +295,7 @@ def create_menu(monitors_info):
                 is_current_rate = (rate == monitor['RefreshRate'])
                 monitor_menu.append(pystray.MenuItem(
                     f"{rate} Hz",
-                    change_rate_action(monitor['Device'], rate),
+                    change_rate_action(monitor, rate),
                     checked=lambda item, is_current_rate=is_current_rate: is_current_rate
                 ))
         # Add a separator after each monitor's refresh rates
@@ -190,8 +304,9 @@ def create_menu(monitors_info):
     # Add refresh option
     monitor_menu.append(pystray.MenuItem(
         "Refresh",
-        refresh_action(),
-        default=True
+        # refresh_action(),
+        lambda _: refresh_tray(),
+        # default=True
     ))
 
     all_rates = set()
@@ -214,6 +329,47 @@ def create_menu(monitors_info):
         pystray.Menu(*all_rates_menu)
     ))
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def toggle_second_monitor_rate():
+        second_monitor = monitors_info[1] if len(monitors_info) > 1 else None
+        if second_monitor:
+            current_rate = second_monitor['RefreshRate']
+            new_rate = 72 if current_rate == 60 else 60
+            change_refresh_rate(second_monitor['Device'], new_rate)
+            show_message("Refresh Rate Switcher", f"Changed 2nd monitor refresh rate to {new_rate} Hz.")
+            # threading.Thread(target=show_message, args=("Refresh Rate Switcher", f"Changed 2nd monitor refresh rate to {new_rate} Hz.")).start()
+
+    # Add toggle option for second monitor's refresh rate
+    monitor_menu.append(pystray.MenuItem(
+        "Toggle 2nd Monitor 60/72 Hz",
+        lambda _: toggle_second_monitor_rate(),
+        default=True
+    ))
+
+
+
+
+
+
+
+
+
+
+
     # monitor_menu.append(pystray.Menu.SEPARATOR)
 
     # Add exit option
@@ -226,25 +382,41 @@ def create_menu(monitors_info):
 
 
 
+def auto_refresh_tray():
+    while True:
+        refresh_tray()
+        time.sleep(1)
+
+
+# MARK: set_all_monitors_to_60hz()
+def set_all_monitors_to_60hz():
+    monitors_info = get_monitors_info()
+    for monitor in monitors_info:
+        change_refresh_rate(monitor['Device'], 60)
+    show_message("Refresh Rate Switcher", "All monitors set to 60 Hz.")
+
+
+
+
+
+
+
+
+
+
 # MARK: Main
 if __name__ == "__main__":
 
-    # MARK: Load icon
     if getattr(sys, 'frozen', False):
         # Якщо програма запущена як EXE, шлях до іконки відносно до виконуваного файлу
-
         icon_path = os.path.join(sys._MEIPASS, 'icon_color.ico')
-
         # if is_dark_theme():
         #     icon_path = os.path.join(sys._MEIPASS, 'icon_light.ico')
         # else:
         #     icon_path = os.path.join(sys._MEIPASS, 'icon_dark.ico')
-
     else:
         # Якщо програма запущена з Python, використовуємо поточну директорію
-
-        icon_path = 'icons/icon_color.ico'
-
+        icon_path = 'icons/icon_color_dev.ico'
         # if is_dark_theme():
         #     icon_path = 'icons/icon_light.ico' 
         # else:
@@ -260,9 +432,23 @@ if __name__ == "__main__":
                         menu=pystray.Menu(*create_menu(get_monitors_info()))
                         )
 
-
-
     icon.run()
+
+
+
+
+
+    # Register global hotkey (Ctrl+Alt+S) to set all monitors to 60 Hz
+    # keyboard.add_hotkey('ctrl+alt+]', set_all_monitors_to_60hz)
+
+    # Start auto-refresh thread
+    # threading.Thread(target=auto_refresh_tray, daemon=True).start()
+
+    # m_info = get_monitors_info()
+
+    # for monitor in m_info:
+    #     print(monitor)
+
 
 
 
