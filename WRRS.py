@@ -130,7 +130,7 @@ def get_monitors_info():
 
     # for monitor in monitors:
     #     print(monitor)
-    print("get_monitors_info()")
+    # print("get_monitors_info()")
 
     return monitors
 
@@ -243,11 +243,10 @@ def read_presets_from_registry():
 
 # MARK: read_profiles_from_reg()
 def read_profiles_from_reg():
-        registry_path = r"Software\WRRS\Settings"
 
         def get_profile_value(profile_name):
             try:
-                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH) as key:
                     json_data = winreg.QueryValueEx(key, profile_name)[0]
                     return json.loads(json_data)
             except (FileNotFoundError, OSError, json.JSONDecodeError):
@@ -352,12 +351,10 @@ def create_menu(monitors_info):
 
         json_data = json.dumps(presets)
 
-        # Шлях до реєстру
-        registry_path = r"Software\WRRS\Settings"
         key_name = f"Profile{preset_number}"
 
         # Запис у реєстр
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH) as key:
             winreg.SetValueEx(key, key_name, 0, winreg.REG_SZ, json_data)
         
         set_hotkeys()
@@ -365,10 +362,9 @@ def create_menu(monitors_info):
 
 
     def clear_all_profiles():
-        registry_path = r"Software\WRRS\Settings"
         profile_keys = "Profile1", "Profile2", "Profile3"
 
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH) as key:
             for profile_key in profile_keys:
                 try:
                     winreg.DeleteValue(key, profile_key)
@@ -431,7 +427,7 @@ def create_menu(monitors_info):
 
 def set_hotkeys():
     profile_1, profile_2, profile_3 = read_profiles_from_reg()
-    print("set_hotkeys()")
+    # print("set_hotkeys()")
 
     if profile_1: 
         if 'ctrl+alt+1' not in keyboard._hotkeys:
