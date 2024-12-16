@@ -319,6 +319,40 @@ def read_presets_from_registry():
 
 
 
+def read_profiles_from_reg():
+        registry_path = r"Software\WRRS\Settings"
+
+        def get_profile_value(profile_name):
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+                    json_data = winreg.QueryValueEx(key, profile_name)[0]
+                    return json.loads(json_data)
+            except (FileNotFoundError, OSError, json.JSONDecodeError):
+                return {}
+
+        p1 = get_profile_value("Profile1")
+        p2 = get_profile_value("Profile2")
+        p3 = get_profile_value("Profile3")
+
+        return p1, p2, p3
+
+
+
+
+
+
+
+# MARK: set_profile()
+def set_profile(preset):
+
+    monitors_info = get_monitors_info()
+
+    for monitor_p in preset:
+        for monitor_i in monitors_info:
+            if monitor_i["serial"] == monitor_p["serial"]:
+                change_refresh_rate_with_brightness_restore(monitor_i, monitor_p["RefreshRate"])
+                break
+    icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
 
 
 
@@ -377,6 +411,144 @@ def create_menu(monitors_info):
 
 
 
+    
+
+
+    monitor_menu.append(pystray.Menu.SEPARATOR)
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+    profile_1, profile_2, profile_3 = read_profiles_from_reg()
+    
+    if profile_1:
+        monitor_menu.append(pystray.MenuItem(
+            text = f"Profile1 (Ctrl+Alt+1)",
+            action = lambda _: set_profile(profile_1),
+        ))
+
+    if profile_2:
+        monitor_menu.append(pystray.MenuItem(
+            text = f"Profile2 (Ctrl+Alt+2)",
+            action = lambda _: set_profile(profile_2),
+        ))
+
+    if profile_3:
+        monitor_menu.append(pystray.MenuItem(
+            text = f"Profile3 (Ctrl+Alt+3)",
+            action = lambda _: set_profile(profile_3),
+        ))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def save_profile(preset_number):
+        presets = []
+        for monitor in monitors_info:
+            presets.append({
+                "serial": monitor["serial"],
+                "RefreshRate": monitor["RefreshRate"]
+            })
+
+        json_data = json.dumps(presets)
+
+        # Шлях до реєстру
+        registry_path = r"Software\WRRS\Settings"
+        key_name = f"Profile{preset_number}"
+
+        # Запис у реєстр
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+            winreg.SetValueEx(key, key_name, 0, winreg.REG_SZ, json_data)
+        
+        set_hotkeys()
+        icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
+
+
+
+    # def clear_all_profiles():
+    #     registry_path = r"Software\WRRS\Settings"
+    #     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+    #         winreg.DeleteValue(key, "Profile1")
+    #         winreg.DeleteValue(key, "Profile2")
+    #         winreg.DeleteValue(key, "Profile3")
+
+    #     set_hotkeys()
+    #     icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
+
+
+
+
+    def clear_all_profiles():
+        registry_path = r"Software\WRRS\Settings"
+        profile_keys = "Profile1", "Profile2", "Profile3"
+
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+            for profile_key in profile_keys:
+                try:
+                    winreg.DeleteValue(key, profile_key)
+                except FileNotFoundError:
+                    print(f"{profile_key} does not exist in the registry.")
+        
+        set_hotkeys()
+        icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
+
+
+
+
+    monitor_menu.append(pystray.MenuItem(
+        "Save Profile",
+        pystray.Menu(
+            pystray.MenuItem(text = "Save to Profile1", action = lambda _: save_profile(1)),
+            pystray.MenuItem(text = "Save to Profile2", action = lambda _: save_profile(2)),
+            pystray.MenuItem(text = "Save to Profile3", action = lambda _: save_profile(3)),
+
+            pystray.Menu.SEPARATOR,
+
+            pystray.MenuItem("Clear all profiles", clear_all_profiles),
+            )
+        ))
+
+
+    monitor_menu.append(pystray.Menu.SEPARATOR)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # Add refresh option
     monitor_menu.append(pystray.MenuItem(
         text = "Refresh",
@@ -406,7 +578,6 @@ def create_menu(monitors_info):
     ))
 
 
-    monitor_menu.append(pystray.Menu.SEPARATOR)
 
 
 
@@ -415,131 +586,10 @@ def create_menu(monitors_info):
 
 
 
-    def read_profiles_from_reg():
-        registry_path = r"Software\WRRS\Settings"
 
-        def get_profile_value(profile_name):
-            try:
-                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
-                    json_data = winreg.QueryValueEx(key, profile_name)[0]
-                    return json.loads(json_data)
-            except (FileNotFoundError, OSError, json.JSONDecodeError):
-                return {}
 
-        p1 = get_profile_value("Profile1")
-        p2 = get_profile_value("Profile2")
-        p3 = get_profile_value("Profile3")
 
-        return p1, p2, p3
 
-
-
-
-    def set_profile(preset):
-
-        for monitor_p in preset:
-
-            for monitor_i in monitors_info:
-
-                if monitor_i["serial"] == monitor_p["serial"]:
-
-                    change_refresh_rate_with_brightness_restore(monitor_i, monitor_p["RefreshRate"])
-
-                    break
-        
-        icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
-
-
-
-
-
-
-
-
-
-
-
-    profile_1, profile_2, profile_3 = read_profiles_from_reg()
-
-    if profile_1:
-        monitor_menu.append(pystray.MenuItem(
-            text = f"Profile1 (Ctrl+Alt+1)",
-            action = lambda _: set_profile(profile_1),
-        ))
-        # keyboard.add_hotkey('ctrl+alt+1', lambda: set_profile(profile_1))
-
-    if profile_2:
-        monitor_menu.append(pystray.MenuItem(
-            text = f"Profile2 (Ctrl+Alt+2)",
-            action = lambda _: set_profile(profile_2),
-        ))
-        # keyboard.add_hotkey('ctrl+alt+2', lambda: set_profile(profile_2))
-
-    if profile_3:
-        monitor_menu.append(pystray.MenuItem(
-            text = f"Profile3 (Ctrl+Alt+3)",
-            action = lambda _: set_profile(profile_3),
-        ))
-        # keyboard.add_hotkey('ctrl+alt+3', lambda: set_profile(profile_3))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def spt(preset_number):
-
-        presets = []
-        for monitor in monitors_info:
-            presets.append({
-                "serial": monitor["serial"],
-                "RefreshRate": monitor["RefreshRate"]
-            })
-
-        json_data = json.dumps(presets)
-
-        # Шлях до реєстру
-        registry_path = r"Software\WRRS\Settings"
-        key_name = f"Profile{preset_number}"
-
-        # Запис у реєстр
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
-            winreg.SetValueEx(key, key_name, 0, winreg.REG_SZ, json_data)
-
-
-
-    monitor_menu.append(pystray.MenuItem(
-        "Save Profile",
-        pystray.Menu(
-            pystray.MenuItem(text = "Save to Profile1", action = lambda _: spt(1)),
-            pystray.MenuItem(text = "Save to Profile2", action = lambda _: spt(2)),
-            pystray.MenuItem(text = "Save to Profile3", action = lambda _: spt(3)),
-
-            pystray.Menu.SEPARATOR,
-
-            pystray.MenuItem("Clear all profiles", None),
-            )
-        ))
-
-
-    monitor_menu.append(pystray.Menu.SEPARATOR)
 
     # Add exit option
     monitor_menu.append(pystray.MenuItem(
@@ -561,17 +611,42 @@ def create_menu(monitors_info):
 
 
 
-# MARK: set_all_monitors_to_60hz()
-def set_all_monitors_to_60hz():
-    monitors_info = get_monitors_info()
-    for monitor in monitors_info:
-        change_refresh_rate_with_brightness_restore(monitor, 60)
-    show_notification("Refresh Rate Switcher", "All monitors set to 60 Hz.")
+
+def set_hotkeys():
+    profile_1, profile_2, profile_3 = read_profiles_from_reg()
+    print("set_hotkeys()")
 
 
+    if profile_1: 
+        if 'ctrl+alt+1' not in keyboard._hotkeys:
+            keyboard.add_hotkey('ctrl+alt+1', lambda: set_profile(profile_1))
+            # keyboard.add_hotkey('ctrl+alt+1', lambda: print(1))
+            print("Hotkey 1 added")
+    elif 'ctrl+alt+1' in keyboard._hotkeys:
+        keyboard.remove_hotkey('ctrl+alt+1')
+        print("Hotkey 1 removed")
 
 
+    if profile_2: 
+        if 'ctrl+alt+2' not in keyboard._hotkeys:
+            keyboard.add_hotkey('ctrl+alt+2', lambda: set_profile(profile_2))
+            # keyboard.add_hotkey('ctrl+alt+2', lambda: print(2))
+            print("Hotkey 2 added")
+    elif 'ctrl+alt+2' in keyboard._hotkeys:
+        keyboard.remove_hotkey('ctrl+alt+2')
+        print("Hotkey 2 removed")
 
+
+    if profile_3: 
+        if 'ctrl+alt+3' not in keyboard._hotkeys:
+            keyboard.add_hotkey('ctrl+alt+3', lambda: set_profile(profile_3))
+            # keyboard.add_hotkey('ctrl+alt+3', lambda: print(3))
+            print("Hotkey 3 added")
+    elif 'ctrl+alt+3' in keyboard._hotkeys:
+        keyboard.remove_hotkey('ctrl+alt+3')
+        print("Hotkey 3 removed")
+
+    
 
 
 
@@ -612,6 +687,9 @@ if __name__ == "__main__":
     # keyboard.remove_hotkey("ctrl+alt+1")
 
 
+
+    set_hotkeys()
+ 
 
     icon.run()
 
