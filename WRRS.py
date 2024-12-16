@@ -13,6 +13,7 @@ import os
 import winreg
 
 from reg_utils import is_dark_theme, key_exists, create_reg_key
+from toast import show_notification
 import config
 
 from winotify import Notification, audio
@@ -27,7 +28,7 @@ import keyboard  # Add this import for keyboard hotkey support
 
 import screen_brightness_control as sbc
 
-
+import json
 
 
 
@@ -251,20 +252,10 @@ def print_test():
 
 
 
-# MARK: show_message()
-def show_message(title, message):
 
-    # icon_path = "C:\Projects\GitHub\windows_refresh_rate_switcher\icons\icon_color.ico"
 
-    toast = Notification(
-        app_id = 'Refresh Rate Switcher',
-        title = title,
-        msg = message,
-        duration = "short",
-        # icon = icon_path,
-    )
-    toast.set_audio(audio.Default, loop=False)
-    toast.show()
+
+
 
 
 
@@ -298,7 +289,6 @@ def read_presets_from_registry():
 
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH, 0, winreg.KEY_READ)
         i = 0
-
         while True:
             try:
                 value_name, value_data, _ = winreg.EnumValue(key, i)
@@ -310,12 +300,19 @@ def read_presets_from_registry():
             except OSError:
                 break
         winreg.CloseKey(key)
-
     except Exception as e:
         print(f"Error reading presets from registry: {e}")
 
     print(f"read_presets_from_registry(): {presets}")
     return presets
+
+
+
+
+
+
+
+
 
 
 
@@ -422,8 +419,8 @@ def create_menu(monitors_info):
             current_rate = second_monitor['RefreshRate']
             new_rate = 72 if current_rate == 60 else 60
             change_refresh_rate(second_monitor['Device'], new_rate)
-            show_message("Refresh Rate Switcher", f"Changed 2nd monitor refresh rate to {new_rate} Hz.")
-            # threading.Thread(target=show_message, args=("Refresh Rate Switcher", f"Changed 2nd monitor refresh rate to {new_rate} Hz.")).start()
+            show_notification("Refresh Rate Switcher", f"Changed 2nd monitor refresh rate to {new_rate} Hz.")
+            # threading.Thread(target=show_notification, args=("Refresh Rate Switcher", f"Changed 2nd monitor refresh rate to {new_rate} Hz.")).start()
 
     # Add toggle option for second monitor's refresh rate
     monitor_menu.append(pystray.MenuItem(
@@ -436,17 +433,7 @@ def create_menu(monitors_info):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+    monitor_menu.append(pystray.Menu.SEPARATOR)
 
 
 
@@ -461,7 +448,7 @@ def create_menu(monitors_info):
     def save_preset(monitor):
         preset_name = f"Preset_{monitor['display_name']}"
         write_preset_to_registry(preset_name, monitor["serial"], monitor["RefreshRate"])
-        show_message("Refresh Rate Switcher", f"Preset '{preset_name}' saved.")
+        show_notification("Refresh Rate Switcher", f"Preset '{preset_name}' saved.")
 
     def load_preset(preset_name):
         presets = read_presets_from_registry()
@@ -470,7 +457,7 @@ def create_menu(monitors_info):
             for monitor in monitors_info:
                 if monitor["serial"] == preset["serial"]:
                     change_refresh_rate_with_brightness_restore(monitor, preset["refresh_rate"])
-                    show_message("Refresh Rate Switcher", f"Preset '{preset_name}' loaded.")
+                    show_notification("Refresh Rate Switcher", f"Preset '{preset_name}' loaded.")
                     break
 
     # Add save preset option for each monitor
@@ -490,6 +477,7 @@ def create_menu(monitors_info):
 
 
 
+    monitor_menu.append(pystray.Menu.SEPARATOR)
 
 
 
@@ -510,7 +498,134 @@ def create_menu(monitors_info):
 
 
 
-    # monitor_menu.append(pystray.Menu.SEPARATOR)
+
+
+
+
+
+
+    def read_profiles_from_reg():
+        registry_path = r"Software\WRRS\Settings"
+
+        def get_profile_value(profile_name):
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+                    json_data = winreg.QueryValueEx(key, profile_name)[0]
+                    return json.loads(json_data)
+            except (FileNotFoundError, OSError, json.JSONDecodeError):
+                return {}
+
+        p1 = get_profile_value("Profile1")
+        p2 = get_profile_value("Profile2")
+        p3 = get_profile_value("Profile3")
+
+        return p1, p2, p3
+
+
+    profile_lock = threading.Lock()
+
+    def set_profile(preset):
+        if profile_lock.locked():
+            return
+        with profile_lock:
+            for monitor_p in preset:
+                print(monitor_p)
+                for monitor_i in monitors_info:
+                    if monitor_i["serial"] == monitor_p["serial"]:
+                        change_refresh_rate_with_brightness_restore(monitor_i, monitor_p["RefreshRate"])
+                        break
+
+
+
+
+
+
+
+
+
+
+
+    profile_1, profile_2, profile_3 = read_profiles_from_reg()
+
+    if profile_1:
+        monitor_menu.append(pystray.MenuItem(
+            text = f"Profile1 (Ctrl+Alt+1)",
+            action = lambda _: set_profile(profile_1),
+        ))
+
+
+    if profile_2:
+        monitor_menu.append(pystray.MenuItem(
+            text = f"Profile2 (Ctrl+Alt+2)",
+            action = lambda _: set_profile(profile_2),
+        ))
+
+    if profile_3:
+        monitor_menu.append(pystray.MenuItem(
+            text = f"Profile3 (Ctrl+Alt+3)",
+            action = lambda _: set_profile(profile_3),
+        ))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def spt(preset_number):
+
+        presets = []
+        for monitor in monitors_info:
+            presets.append({
+                "serial": monitor["serial"],
+                "RefreshRate": monitor["RefreshRate"]
+            })
+
+        json_data = json.dumps(presets)
+
+        # Шлях до реєстру
+        registry_path = r"Software\WRRS\Settings"
+        key_name = f"Profile{preset_number}"
+
+        # Запис у реєстр
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
+            winreg.SetValueEx(key, key_name, 0, winreg.REG_SZ, json_data)
+
+
+
+    monitor_menu.append(pystray.MenuItem(
+        "Save to Profile",
+        pystray.Menu(
+            pystray.MenuItem(text = "Save to Profile1", action = lambda _: spt(1)),
+            pystray.MenuItem(text = "Save to Profile2", action = lambda _: spt(2)),
+            pystray.MenuItem(text = "Save to Profile3", action = lambda _: spt(3)),
+
+            pystray.Menu.SEPARATOR,
+
+            pystray.MenuItem("Clear all profiles", None),
+            )
+        ))
+
+
+    monitor_menu.append(pystray.Menu.SEPARATOR)
 
     # Add exit option
     monitor_menu.append(pystray.MenuItem(
@@ -525,12 +640,19 @@ def create_menu(monitors_info):
 
 
 
+
+
+
+
+
+
+
 # MARK: set_all_monitors_to_60hz()
 def set_all_monitors_to_60hz():
     monitors_info = get_monitors_info()
     for monitor in monitors_info:
         change_refresh_rate_with_brightness_restore(monitor, 60)
-    show_message("Refresh Rate Switcher", "All monitors set to 60 Hz.")
+    show_notification("Refresh Rate Switcher", "All monitors set to 60 Hz.")
 
 
 
@@ -572,10 +694,8 @@ if __name__ == "__main__":
 
 
     # Register global hotkey (Ctrl+Alt+S) to set all monitors to 60 Hz
-    keyboard.add_hotkey('ctrl+alt+1', set_all_monitors_to_60hz)
-
-
-
+    # keyboard.add_hotkey('ctrl+alt+1', set_all_monitors_to_60hz)
+    # keyboard.remove_hotkey("ctrl+alt+1")
 
     icon.run()
 
