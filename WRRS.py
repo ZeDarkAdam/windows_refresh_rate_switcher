@@ -16,29 +16,14 @@ from reg_utils import is_dark_theme, key_exists, create_reg_key
 from toast import show_notification
 import config
 
-from winotify import Notification, audio
-
 import threading
 
 import time
 import keyboard  # Add this import for keyboard hotkey support
 
-
-
-
 import screen_brightness_control as sbc
 
 import json
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -74,18 +59,11 @@ def read_excluded_rates_from_registry():
         winreg.CloseKey(key)
 
         # print(f"read_excluded_rates_from_registry(): {excluded_rates}")
-
         return excluded_rates
     
     except Exception as e:
         print(f"Error reading from registry: {e}")
         return []
-
-
-
-
-
-
 
 
 
@@ -137,9 +115,6 @@ def get_monitors_info():
     # Call EnumDisplayMonitors
     enum_display_monitors(None, None, MonitorEnumProc(monitor_enum_proc), 0)
 
-
-
-
     sbc_info = sbc.list_monitors_info()
     for index, monitor in enumerate(monitors):
         monitor["name"] = sbc_info[index]["name"]
@@ -153,18 +128,11 @@ def get_monitors_info():
         else:
             monitor["display_name"] = f"{monitor["manufacturer"]} ({index + 1})"
 
-
     # for monitor in monitors:
     #     print(monitor)
     print("get_monitors_info()")
 
-
     return monitors
-
-
-
-
-
 
 
 
@@ -193,24 +161,16 @@ def change_refresh_rate_with_brightness_restore(monitor, refresh_rate, refresh=F
     brightness_before = sbc.get_brightness(display=monitor["name"])
     # print(f"Current brightness of {monitor['name']}: {brightness_before}")
 
-
     change_refresh_rate(monitor, refresh_rate)
 
-    # Restore brightness
-    # time.sleep(5)
-    # sbc.set_brightness(*brightness, display=monitor["name"])
-
+    # Refresh the icon menu
     if refresh:
-        # Refresh the icon menu
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
-
 
     # Restore brightness in a separate thread
     def restore_brightness():
         time.sleep(5)
-
         brightness_after = sbc.get_brightness(display=monitor["name"])
-
         if brightness_after != brightness_before:
             sbc.set_brightness(*brightness_before, display=monitor["name"])
             print(f"Restored brightness of {monitor['name']} from {brightness_after} to {brightness_before}")
@@ -219,15 +179,12 @@ def change_refresh_rate_with_brightness_restore(monitor, refresh_rate, refresh=F
 
 
 
-
-
-
 # MARK: refresh_tray()
 def refresh_tray():
     icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
 
 
-
+# MARK: toggle_excluded_rate_ext()
 def toggle_excluded_rate_ext(rate):
         excluded_rates = read_excluded_rates_from_registry()
 
@@ -241,36 +198,6 @@ def toggle_excluded_rate_ext(rate):
         # Refresh tray menu
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
         # refresh_tray()
-
-def print_test():
-    print("Test")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -314,11 +241,7 @@ def read_presets_from_registry():
 
 
 
-
-
-
-
-
+# MARK: read_profiles_from_reg()
 def read_profiles_from_reg():
         registry_path = r"Software\WRRS\Settings"
 
@@ -338,10 +261,6 @@ def read_profiles_from_reg():
 
 
 
-
-
-
-
 # MARK: set_profile()
 def set_profile(preset):
 
@@ -353,14 +272,6 @@ def set_profile(preset):
                 change_refresh_rate_with_brightness_restore(monitor_i, monitor_p["RefreshRate"])
                 break
     icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
-
-
-
-
-
-
-
-
 
 
 
@@ -408,27 +319,7 @@ def create_menu(monitors_info):
         monitor_menu.append(pystray.Menu.SEPARATOR)
 
 
-
-
-
-    
-
-
     monitor_menu.append(pystray.Menu.SEPARATOR)
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
 
     profile_1, profile_2, profile_3 = read_profiles_from_reg()
     
@@ -449,18 +340,6 @@ def create_menu(monitors_info):
             text = f"Profile3 (Ctrl+Alt+3)",
             action = lambda _: set_profile(profile_3),
         ))
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     def save_profile(preset_number):
@@ -485,20 +364,6 @@ def create_menu(monitors_info):
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
 
 
-
-    # def clear_all_profiles():
-    #     registry_path = r"Software\WRRS\Settings"
-    #     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, registry_path) as key:
-    #         winreg.DeleteValue(key, "Profile1")
-    #         winreg.DeleteValue(key, "Profile2")
-    #         winreg.DeleteValue(key, "Profile3")
-
-    #     set_hotkeys()
-    #     icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
-
-
-
-
     def clear_all_profiles():
         registry_path = r"Software\WRRS\Settings"
         profile_keys = "Profile1", "Profile2", "Profile3"
@@ -514,38 +379,7 @@ def create_menu(monitors_info):
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
 
 
-
-
-    # monitor_menu.append(pystray.MenuItem(
-    #     "Save Profile",
-    #     pystray.Menu(
-    #         pystray.MenuItem(text = "Save to Profile1", action = lambda _: save_profile(1)),
-    #         pystray.MenuItem(text = "Save to Profile2", action = lambda _: save_profile(2)),
-    #         pystray.MenuItem(text = "Save to Profile3", action = lambda _: save_profile(3)),
-
-    #         pystray.Menu.SEPARATOR,
-
-    #         pystray.MenuItem("Clear all profiles", clear_all_profiles),
-    #         )
-    #     ))
     monitor_menu.append(pystray.Menu.SEPARATOR)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     # Add refresh option
     monitor_menu.append(pystray.MenuItem(
@@ -586,19 +420,6 @@ def create_menu(monitors_info):
     ))
 
 
-
-
-    
-
-
-
-
-
-
-
-
-
-
     # Add exit option
     monitor_menu.append(pystray.MenuItem(
         "Quit",
@@ -608,22 +429,9 @@ def create_menu(monitors_info):
     return monitor_menu
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def set_hotkeys():
     profile_1, profile_2, profile_3 = read_profiles_from_reg()
     print("set_hotkeys()")
-
 
     if profile_1: 
         if 'ctrl+alt+1' not in keyboard._hotkeys:
@@ -653,10 +461,6 @@ def set_hotkeys():
     elif 'ctrl+alt+3' in keyboard._hotkeys:
         keyboard.remove_hotkey('ctrl+alt+3')
         print("Hotkey 3 removed")
-
-    
-
-
 
 
 
@@ -688,31 +492,9 @@ if __name__ == "__main__":
                         menu=pystray.Menu(*create_menu(monitors_info))
                         )
 
-
-
-    # Register global hotkey (Ctrl+Alt+S) to set all monitors to 60 Hz
-    # keyboard.add_hotkey('ctrl+alt+1', set_all_monitors_to_60hz)
-    # keyboard.remove_hotkey("ctrl+alt+1")
-
-
-
     set_hotkeys()
  
-
     icon.run()
-
-
-
-
-
-    
-
-    
-
-    # m_info = get_monitors_info()
-
-    # for monitor in m_info:
-    #     print(monitor)
 
 
 
