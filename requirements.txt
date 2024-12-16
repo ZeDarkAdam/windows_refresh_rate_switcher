@@ -1,0 +1,6 @@
+keyboard==0.13.5
+Pillow==11.0.0
+pystray==0.19.5
+pywin32==308
+screen_brightness_control==0.24.1
+winotify==1.1.0
