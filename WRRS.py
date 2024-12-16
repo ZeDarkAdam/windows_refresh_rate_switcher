@@ -516,20 +516,18 @@ def create_menu(monitors_info):
 
 
 
-    monitor_menu.append(pystray.MenuItem(
-        "Save Profile",
-        pystray.Menu(
-            pystray.MenuItem(text = "Save to Profile1", action = lambda _: save_profile(1)),
-            pystray.MenuItem(text = "Save to Profile2", action = lambda _: save_profile(2)),
-            pystray.MenuItem(text = "Save to Profile3", action = lambda _: save_profile(3)),
+    # monitor_menu.append(pystray.MenuItem(
+    #     "Save Profile",
+    #     pystray.Menu(
+    #         pystray.MenuItem(text = "Save to Profile1", action = lambda _: save_profile(1)),
+    #         pystray.MenuItem(text = "Save to Profile2", action = lambda _: save_profile(2)),
+    #         pystray.MenuItem(text = "Save to Profile3", action = lambda _: save_profile(3)),
 
-            pystray.Menu.SEPARATOR,
+    #         pystray.Menu.SEPARATOR,
 
-            pystray.MenuItem("Clear all profiles", clear_all_profiles),
-            )
-        ))
-
-
+    #         pystray.MenuItem("Clear all profiles", clear_all_profiles),
+    #         )
+    #     ))
     monitor_menu.append(pystray.Menu.SEPARATOR)
 
 
@@ -565,22 +563,32 @@ def create_menu(monitors_info):
     # Add a dropdown menu for all available refresh rates
     all_rates_menu = []
 
+    all_rates_menu.append(pystray.MenuItem(text = "Exclude", action = None, enabled=False))
+
     for rate in all_rates:
         all_rates_menu.append(pystray.MenuItem(
             f"{rate} Hz",
             checked=lambda item, rate=rate: rate not in excluded_rates,
             action=toggle_excluded_rate(rate)
         ))
+    
+    all_rates_menu.append(pystray.Menu.SEPARATOR)
+    all_rates_menu.append(pystray.MenuItem(text = "Save to Profile1", action = lambda _: save_profile(1)))
+    all_rates_menu.append(pystray.MenuItem(text = "Save to Profile2", action = lambda _: save_profile(2)))
+    all_rates_menu.append(pystray.MenuItem(text = "Save to Profile3", action = lambda _: save_profile(3)))
+    all_rates_menu.append(pystray.Menu.SEPARATOR)
+    all_rates_menu.append(pystray.MenuItem("Clear all profiles", clear_all_profiles))
+
 
     monitor_menu.append(pystray.MenuItem(
-        "Exclude",
+        "Options",
         pystray.Menu(*all_rates_menu)
     ))
 
 
 
 
-
+    
 
 
 
