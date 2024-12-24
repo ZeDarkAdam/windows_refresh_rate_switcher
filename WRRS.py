@@ -321,25 +321,30 @@ def create_menu(monitors_info):
     monitor_menu.append(pystray.Menu.SEPARATOR)
 
     profile_1, profile_2, profile_3 = read_profiles_from_reg()
-    
+    print(f"Profiles: {profile_1}, {profile_2}, {profile_3}")
+
+
     if profile_1:
+        refresh_rates = ", ".join([str(monitor['RefreshRate']) for monitor in profile_1])
         monitor_menu.append(pystray.MenuItem(
             # text = f"Profile1 (Ctrl+Alt+1)",
-            text = f"Profile1",
+            text = f"P1 ({refresh_rates})",
             action = lambda _: set_profile(profile_1),
         ))
 
     if profile_2:
+        refresh_rates = ", ".join([str(monitor['RefreshRate']) for monitor in profile_2])
         monitor_menu.append(pystray.MenuItem(
             # text = f"Profile2 (Ctrl+Alt+2)",
-            text = f"Profile2",
+            text = f"P2 ({refresh_rates})",
             action = lambda _: set_profile(profile_2),
         ))
 
     if profile_3:
+        refresh_rates = ", ".join([str(monitor['RefreshRate']) for monitor in profile_3])
         monitor_menu.append(pystray.MenuItem(
             # text = f"Profile3 (Ctrl+Alt+3)",
-            text = f"Profile3",
+            text = f"P3 ({refresh_rates})",
             action = lambda _: set_profile(profile_3),
         ))
 
