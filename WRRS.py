@@ -324,19 +324,22 @@ def create_menu(monitors_info):
     
     if profile_1:
         monitor_menu.append(pystray.MenuItem(
-            text = f"Profile1 (Ctrl+Alt+1)",
+            # text = f"Profile1 (Ctrl+Alt+1)",
+            text = f"Profile1",
             action = lambda _: set_profile(profile_1),
         ))
 
     if profile_2:
         monitor_menu.append(pystray.MenuItem(
-            text = f"Profile2 (Ctrl+Alt+2)",
+            # text = f"Profile2 (Ctrl+Alt+2)",
+            text = f"Profile2",
             action = lambda _: set_profile(profile_2),
         ))
 
     if profile_3:
         monitor_menu.append(pystray.MenuItem(
-            text = f"Profile3 (Ctrl+Alt+3)",
+            # text = f"Profile3 (Ctrl+Alt+3)",
+            text = f"Profile3",
             action = lambda _: set_profile(profile_3),
         ))
 
@@ -357,7 +360,7 @@ def create_menu(monitors_info):
         with winreg.CreateKey(winreg.HKEY_CURRENT_USER, config.REGISTRY_PATH) as key:
             winreg.SetValueEx(key, key_name, 0, winreg.REG_SZ, json_data)
         
-        set_hotkeys()
+        # set_hotkeys()
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
 
 
@@ -371,7 +374,7 @@ def create_menu(monitors_info):
                 except FileNotFoundError:
                     print(f"{profile_key} does not exist in the registry.")
         
-        set_hotkeys()
+        # set_hotkeys()
         icon.menu = pystray.Menu(*create_menu(get_monitors_info()))
 
 
@@ -425,38 +428,38 @@ def create_menu(monitors_info):
     return monitor_menu
 
 
-def set_hotkeys():
-    profile_1, profile_2, profile_3 = read_profiles_from_reg()
-    # print("set_hotkeys()")
+# def set_hotkeys():
+#     profile_1, profile_2, profile_3 = read_profiles_from_reg()
+#     # print("set_hotkeys()")
 
-    if profile_1: 
-        if 'ctrl+alt+1' not in keyboard._hotkeys:
-            keyboard.add_hotkey('ctrl+alt+1', lambda: set_profile(profile_1))
-            # keyboard.add_hotkey('ctrl+alt+1', lambda: print(1))
-            print("Hotkey 1 added")
-    elif 'ctrl+alt+1' in keyboard._hotkeys:
-        keyboard.remove_hotkey('ctrl+alt+1')
-        print("Hotkey 1 removed")
-
-
-    if profile_2: 
-        if 'ctrl+alt+2' not in keyboard._hotkeys:
-            keyboard.add_hotkey('ctrl+alt+2', lambda: set_profile(profile_2))
-            # keyboard.add_hotkey('ctrl+alt+2', lambda: print(2))
-            print("Hotkey 2 added")
-    elif 'ctrl+alt+2' in keyboard._hotkeys:
-        keyboard.remove_hotkey('ctrl+alt+2')
-        print("Hotkey 2 removed")
+#     if profile_1: 
+#         if 'ctrl+alt+1' not in keyboard._hotkeys:
+#             keyboard.add_hotkey('ctrl+alt+1', lambda: set_profile(profile_1))
+#             # keyboard.add_hotkey('ctrl+alt+1', lambda: print(1))
+#             print("Hotkey 1 added")
+#     elif 'ctrl+alt+1' in keyboard._hotkeys:
+#         keyboard.remove_hotkey('ctrl+alt+1')
+#         print("Hotkey 1 removed")
 
 
-    if profile_3: 
-        if 'ctrl+alt+3' not in keyboard._hotkeys:
-            keyboard.add_hotkey('ctrl+alt+3', lambda: set_profile(profile_3))
-            # keyboard.add_hotkey('ctrl+alt+3', lambda: print(3))
-            print("Hotkey 3 added")
-    elif 'ctrl+alt+3' in keyboard._hotkeys:
-        keyboard.remove_hotkey('ctrl+alt+3')
-        print("Hotkey 3 removed")
+#     if profile_2: 
+#         if 'ctrl+alt+2' not in keyboard._hotkeys:
+#             keyboard.add_hotkey('ctrl+alt+2', lambda: set_profile(profile_2))
+#             # keyboard.add_hotkey('ctrl+alt+2', lambda: print(2))
+#             print("Hotkey 2 added")
+#     elif 'ctrl+alt+2' in keyboard._hotkeys:
+#         keyboard.remove_hotkey('ctrl+alt+2')
+#         print("Hotkey 2 removed")
+
+
+#     if profile_3: 
+#         if 'ctrl+alt+3' not in keyboard._hotkeys:
+#             keyboard.add_hotkey('ctrl+alt+3', lambda: set_profile(profile_3))
+#             # keyboard.add_hotkey('ctrl+alt+3', lambda: print(3))
+#             print("Hotkey 3 added")
+#     elif 'ctrl+alt+3' in keyboard._hotkeys:
+#         keyboard.remove_hotkey('ctrl+alt+3')
+#         print("Hotkey 3 removed")
 
 
 
@@ -488,7 +491,7 @@ if __name__ == "__main__":
                         menu=pystray.Menu(*create_menu(monitors_info))
                         )
 
-    set_hotkeys()
+    # set_hotkeys()
  
     icon.run()
 
